@@ -102,3 +102,7 @@ required-features = ["rt", "stm32f303xc", "stm32-usbd"]
 [[example]]
 name = "spi"
 required-features = ["stm32f303"]
+
+[[example]]
+name = "encoder"
+required-features = ["rt", "device-selected"]
