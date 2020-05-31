@@ -15,6 +15,7 @@ use hal::stm32::{interrupt, Interrupt, TIM3};
 use hal::watchdog::IndependentWatchDog;
 
 use core::cell::RefCell;
+use core::ops::DerefMut;
 use embedded_hal::Direction;
 use hal::can::{Can, CanFilter, CanFrame, CanId, Filter, Frame, Receiver, Transmitter};
 use nb::block;
@@ -89,18 +90,22 @@ fn main() -> ! {
 
     let mut i: u16 = 1;
     loop {
-        let count = qei.count();
-
+        let mut count = 0;
+        let mut dir: Direction = Direction::Upcounting;
         cortex_m::interrupt::free(move |cs| {
-            let qei = *QEI.borrow(cs).borrow_mut().unwrap()
-            if qei.direction() == Direction::Upcounting && count > (i * 1000) {
-                led0.toggle();
-                i += 1;
-            } else if qei.direction() == Direction::Downcounting && count < (i * 1000) {
-                led0.toggle();
-                i -= 1;
+            if let &mut Some(ref mut qei) = QEI.borrow(cs).borrow_mut().deref_mut() {
+                count = qei.count();
+                dir = qei.direction();
             }
         });
+
+        if dir == Direction::Upcounting && count > (i * 1000) {
+            led0.toggle();
+            i += 1;
+        } else if dir == Direction::Downcounting && count < (i * 1000) {
+            led0.toggle();
+            i -= 1;
+        }
 
         if count != 1 {
             iwdg.feed();
@@ -113,6 +118,9 @@ fn main() -> ! {
 #[interrupt]
 fn EXTI0() {
     cortex_m::interrupt::free(|cs| {
+        if let &mut Some(ref mut qei) = QEI.borrow(cs).borrow_mut().deref_mut() {
+            qei.reset();
+        }
         cortex_m::asm::bkpt();
         asm::delay(1_000);
     });
