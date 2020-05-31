@@ -69,6 +69,10 @@ impl QeiTimer<TIM3, gpioa::PA6<AF2>, gpioa::PA7<AF2>> {
         QeiTimer { tim, ch1, ch2 }
     }
 
+    pub fn reset(&mut self) {
+        self.tim.cnt.modify(|_, w| unsafe { w.bits(0u32) });
+    }
+
     pub fn release(self) -> (TIM3, gpioa::PA6<AF2>, gpioa::PA7<AF2>) {
         return (self.tim, self.ch1, self.ch2);
     }
