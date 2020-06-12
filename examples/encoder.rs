@@ -14,11 +14,13 @@ use hal::stm32;
 use hal::stm32::{interrupt, Interrupt, TIM3};
 use hal::watchdog::IndependentWatchDog;
 
+use core::borrow::Borrow;
 use core::cell::RefCell;
-use core::ops::DerefMut;
+use core::ops::{Deref, DerefMut};
 use embedded_hal::Direction;
 use hal::can::{Can, CanFilter, CanFrame, CanId, Filter, Frame, Receiver, Transmitter};
 use nb::block;
+use stm32f3::stm32f302::EXTI;
 use stm32f3xx_hal::gpio::gpioa::{PA6, PA7};
 use stm32f3xx_hal::gpio::AF2;
 use stm32f3xx_hal::qei::{EncoderMode, QeiTimer};
@@ -53,28 +55,26 @@ fn main() -> ! {
     let ch1 = gpioa.pa6.into_af2(&mut gpioa.moder, &mut gpioa.afrl);
     let ch2 = gpioa.pa7.into_af2(&mut gpioa.moder, &mut gpioa.afrl);
 
-    let qei = hal::qei::QeiTimer::new(
+    let qei_init = hal::qei::QeiTimer::new(
         dp.TIM3,
         &mut rcc.apb1,
         EncoderMode::BothEdges,
-        10000,
+        4096,
         ch1,
         ch2,
     );
 
-    cortex_m::interrupt::free(move |cs| {
-        *QEI.borrow(cs).borrow_mut() = Some(qei);
-    });
+    cortex_m::interrupt::free(move |cs| QEI.borrow(cs).replace(Some(qei_init)));
 
     let mut led0 = gpiob
         .pb15
         .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
     led0.set_high().unwrap();
 
-    // Watchdog makes sure this gets restarted periodically if nothing happens
-    let mut iwdg = IndependentWatchDog::new(dp.IWDG);
-    iwdg.stop_on_debug(&dp.DBGMCU, true);
-    iwdg.start(100.ms());
+    let mut led1 = gpiob
+        .pb14
+        .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
+    led1.set_high().unwrap();
 
     unsafe {
         dp.SYSCFG.exticr1.modify(|_, w| w.exti0().bits(0b001));
@@ -90,32 +90,36 @@ fn main() -> ! {
 
     let mut i: u16 = 1;
     loop {
-        let mut count = 0;
-        let mut dir: Direction = Direction::Upcounting;
-        cortex_m::interrupt::free(move |cs| {
-            if let &mut Some(ref mut qei) = QEI.borrow(cs).borrow_mut().deref_mut() {
-                count = qei.count();
-                dir = qei.direction();
+        let (count, dir) = cortex_m::interrupt::free(move |cs| {
+            if let &Some(ref qei) = QEI.borrow(cs).borrow().deref() {
+                (qei.count(), qei.direction())
+            } else {
+                (0, Direction::Upcounting)
             }
         });
 
-        if dir == Direction::Upcounting && count > (i * 1000) {
-            led0.toggle();
-            i += 1;
-        } else if dir == Direction::Downcounting && count < (i * 1000) {
-            led0.toggle();
-            i -= 1;
+        assert!(count <= 4096, "Count OOB {}", count);
+
+        if dir == Direction::Upcounting {
+            led1.set_high().unwrap();
+        } else {
+            led1.set_low().unwrap();
         }
 
-        iwdg.feed();
-
-        asm::delay(1_000);
+        if count % 300 == 0 {
+            led0.toggle();
+        }
     }
 }
 
 #[interrupt]
 fn EXTI0() {
     cortex_m::interrupt::free(|cs| {
+        //cortex_m::peripheral::NVIC::unpend(Interrupt::EXTI0);
+        unsafe {
+            (*EXTI::ptr()).pr1.modify(|_, w| w.pr0().set_bit());
+        }
+
         if let &mut Some(ref mut qei) = QEI.borrow(cs).borrow_mut().deref_mut() {
             qei.reset();
         }
