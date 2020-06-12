@@ -107,9 +107,7 @@ fn main() -> ! {
             i -= 1;
         }
 
-        if count != 1 {
-            iwdg.feed();
-        }
+        iwdg.feed();
 
         asm::delay(1_000);
     }
@@ -121,7 +119,5 @@ fn EXTI0() {
         if let &mut Some(ref mut qei) = QEI.borrow(cs).borrow_mut().deref_mut() {
             qei.reset();
         }
-        cortex_m::asm::bkpt();
-        asm::delay(1_000);
     });
 }
