@@ -19,7 +19,7 @@ use crate::gpio::gpioa::{PA5, PA6, PA7};
     feature = "stm32f378",
     feature = "stm32f398"
 ))]
-use crate::gpio::gpiob::PB13;
+use crate::gpio::gpiob::{PB13, PB3, PB4};
 use crate::gpio::gpiob::{PB14, PB15, PB5};
 use crate::gpio::gpioc::{PC10, PC11, PC12};
 use crate::gpio::{AF5, AF6};
@@ -89,7 +89,18 @@ unsafe impl SckPin<SPI1> for PA5<AF5> {}
 ))]
 unsafe impl SckPin<SPI2> for PB13<AF5> {}
 
-// unsafe impl SckPin<SPI3> for PB3<AF6> {}
+#[cfg(any(
+    feature = "stm32f301",
+    feature = "stm32f302",
+    feature = "stm32f303",
+    feature = "stm32f318",
+    feature = "stm32f328",
+    feature = "stm32f334",
+    feature = "stm32f358",
+    feature = "stm32f378",
+    feature = "stm32f398"
+))]
+unsafe impl SckPin<SPI3> for PB3<AF6> {}
 unsafe impl SckPin<SPI3> for PC10<AF6> {}
 
 unsafe impl MisoPin<SPI1> for PA6<AF5> {}
@@ -97,7 +108,18 @@ unsafe impl MisoPin<SPI1> for PA6<AF5> {}
 
 unsafe impl MisoPin<SPI2> for PB14<AF5> {}
 
-// unsafe impl MisoPin<SPI3> for PB4<AF6> {}
+#[cfg(any(
+    feature = "stm32f301",
+    feature = "stm32f302",
+    feature = "stm32f303",
+    feature = "stm32f318",
+    feature = "stm32f328",
+    feature = "stm32f334",
+    feature = "stm32f358",
+    feature = "stm32f378",
+    feature = "stm32f398"
+))]
+unsafe impl MisoPin<SPI3> for PB4<AF6> {}
 unsafe impl MisoPin<SPI3> for PC11<AF6> {}
 
 unsafe impl MosiPin<SPI1> for PA7<AF5> {}
