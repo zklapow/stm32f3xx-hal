@@ -29,7 +29,7 @@ use stm32f3xx_hal::qei::{EncoderMode, QeiTimer};
 // Max value is 8 because we use a 3 bit mask in the filter
 const ID: u16 = 0b100;
 
-static QEI: Mutex<RefCell<Option<QeiTimer<TIM3, PA6<AF2>, PA7<AF2>>>>> =
+static QEI: Mutex<RefCell<Option<QeiTimer<TIM4, PB6<AF2>, PB7<AF2>>>>> =
     Mutex::new(RefCell::new(None));
 
 #[entry]
@@ -75,6 +75,8 @@ fn main() -> ! {
         .pb14
         .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
     led1.set_high().unwrap();
+
+    let _index = gpiob.pb0.into_pull_down_input();
 
     unsafe {
         dp.SYSCFG.exticr1.modify(|_, w| w.exti0().bits(0b001));
