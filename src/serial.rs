@@ -454,7 +454,8 @@ macro_rules! hal {
     feature = "stm32f378",
     feature = "stm32f328",
     feature = "stm32f358",
-    feature = "stm32f398"
+    feature = "stm32f398",
+    feature = "stm32f302"
 ))]
 hal! {
     USART1: (usart1, APB2, usart1en, usart1rst, pclk2),
@@ -462,7 +463,7 @@ hal! {
     USART3: (usart3, APB1, usart3en, usart3rst, pclk1),
 }
 
-#[cfg(any(feature = "stm32f302", feature = "stm32f334"))]
+#[cfg(any(feature = "stm32f334"))]
 hal! {
     USART1: (usart1, APB2, usart1en, usart1rst, pclk2),
     USART2: (usart2, APB1, usart2en, usart2rst, pclk1),
