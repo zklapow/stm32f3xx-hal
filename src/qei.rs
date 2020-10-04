@@ -3,7 +3,8 @@ use crate::rcc::Clocks;
 use embedded_hal::{Direction, Qei};
 
 use crate::gpio::{gpioa::*, gpiob::*, Input, AF2};
-use crate::stm32::{TIM3, TIM4};
+use crate::rcc::{APB1, APB2};
+use crate::stm32::{TIM1, TIM2, TIM3, TIM4};
 use embedded_hal::digital::InputPin;
 
 pub enum EncoderMode {
@@ -13,10 +14,10 @@ pub enum EncoderMode {
 }
 
 // FIXME these should be "closed" traits
-/// SCL pin -- DO NOT IMPLEMENT THIS TRAIT
+/// QEI pin -- DO NOT IMPLEMENT THIS TRAIT
 pub unsafe trait QeiCh1Pin<TIM> {}
 
-/// SDA pin -- DO NOT IMPLEMENT THIS TRAIT
+/// QEI pin -- DO NOT IMPLEMENT THIS TRAIT
 pub unsafe trait QeiCh2Pin<TIM> {}
 
 unsafe impl QeiCh1Pin<TIM3> for PA6<AF2> {}
@@ -33,16 +34,15 @@ pub struct QeiTimer<TIM, CH1, CH2> {
 }
 
 macro_rules! impl_qei {
-    ($tim: ident, $new: ident, $timen: ident, $timrst: ident) => {
+    ($tim: ident, $new: ident, $apb: ident, $timen: ident, $timrst: ident, $size: ident) => {
         impl<CH1, CH2> Qei for QeiTimer<$tim, CH1, CH2>
         where
             CH1: QeiCh1Pin<$tim>,
             CH2: QeiCh2Pin<$tim>,
         {
-            type Count = u16;
+            type Count = $size;
 
             fn count(&self) -> Self::Count {
-                //cortex_m::asm::bkpt();
                 self.tim.cnt.read().cnt().bits()
             }
 
@@ -62,7 +62,7 @@ macro_rules! impl_qei {
         {
             pub fn $new(
                 tim: $tim,
-                apb: &mut crate::rcc::APB1,
+                apb: &mut $apb,
                 mode: EncoderMode,
                 arr: u16,
                 ch1: CH1,
@@ -103,5 +103,7 @@ macro_rules! impl_qei {
     };
 }
 
-impl_qei!(TIM3, tim3, tim3en, tim3rst);
-impl_qei!(TIM4, tim4, tim4en, tim4rst);
+impl_qei!(TIM1, tim1, APB2, tim1en, tim1rst, u16);
+impl_qei!(TIM2, tim2, APB1, tim2en, tim2rst, u32);
+impl_qei!(TIM3, tim3, APB1, tim3en, tim3rst, u16);
+impl_qei!(TIM4, tim4, APB1, tim4en, tim4rst, u16);
