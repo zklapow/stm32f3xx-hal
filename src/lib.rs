@@ -128,6 +128,8 @@ pub mod i2c;
 pub mod prelude;
 #[cfg(feature = "device-selected")]
 pub mod pwm;
+#[cfg(feature = "stm32f302")]
+pub mod qei;
 #[cfg(feature = "device-selected")]
 pub mod rcc;
 #[cfg(feature = "device-selected")]
