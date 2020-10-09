@@ -196,6 +196,9 @@ cfg_if::cfg_if! {
 pub mod adc;
 #[cfg(any(feature = "stm32f302", feature = "stm32f303"))]
 pub mod dma;
+#[cfg(feature = "stm32f302")]
+pub mod qei;
+
 #[cfg(all(
     feature = "stm32-usbd",
     any(
