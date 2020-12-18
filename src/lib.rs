@@ -191,7 +191,8 @@ cfg_if::cfg_if! {
         pub mod timer;
     }
 }
-#[cfg(feature = "stm32f303")]
+
+#[cfg(any(feature = "stm32f303", feature = "stm32f302"))]
 pub mod adc;
 #[cfg(any(feature = "stm32f302", feature = "stm32f303"))]
 pub mod dma;
