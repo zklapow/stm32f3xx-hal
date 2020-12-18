@@ -15,7 +15,8 @@ use crate::{
     gpio::{gpioa, gpiob, gpioc},
     pac::{ADC1, ADC1_2, ADC2},
 };
-use stm32f3::stm32f303::{adc1::cfgr::ALIGN_A, adc1_2::ccr::CKMODE_A};
+//use stm32f3::stm32f303::{adc1::cfgr::ALIGN_A, adc1_2::ccr::CKMODE_A};
+use crate::stm32::{adc1::cfgr::ALIGN_A, adc1_2::ccr::CKMODE_A};
 const MAX_ADVREGEN_STARTUP_US: u32 = 10;
 
 #[cfg(any(
@@ -28,6 +29,9 @@ use crate::{
     gpio::{gpiod, gpioe, gpiof},
     pac::{ADC3, ADC3_4, ADC4},
 };
+
+#[cfg(any(feature = "stm32f302xb", feature = "stm32f302xc"))]
+use crate::gpio::gpiof;
 
 /// ADC configuration
 // TODO: Remove `pub` from the register block once all functionalities are implemented.
@@ -269,6 +273,32 @@ adc_pins!(ADC4,
     gpiod::PD14<Analog> => 11,
     gpiod::PD8<Analog> => 12,
     gpiod::PD9<Analog> => 13,
+);
+
+// # ADC1 Pin/Channel mapping
+// ## f302
+
+#[cfg(any(feature = "stm32f302xb", feature = "stm32f302xc"))]
+adc_pins!(ADC1,
+    gpioa::PA0<Analog> => 1,
+    gpioa::PA1<Analog> => 2,
+    gpioa::PA2<Analog> => 3,
+    gpioa::PA3<Analog> => 4,
+    gpiof::PF0<Analog> => 5,
+);
+
+// # ADC2 Pin/Channel mapping
+// ## f302
+
+#[cfg(any(feature = "stm32f302xb", feature = "stm32f302xc"))]
+adc_pins!(ADC2,
+    gpioa::PA4<Analog> => 1,
+    gpioa::PA5<Analog> => 2,
+    gpioa::PA6<Analog> => 3,
+    gpioa::PA7<Analog> => 4,
+    gpioc::PC4<Analog> => 5,
+    gpioc::PC5<Analog> => 11,
+    gpiob::PB2<Analog> => 12,
 );
 
 // Abstract implementation of ADC functionality
@@ -545,4 +575,10 @@ adc12_hal! {
 adc34_hal! {
     ADC3: (adc3),
     ADC4: (adc4),
+}
+
+#[cfg(feature = "stm32f302")]
+adc12_hal! {
+    ADC1: (adc1),
+    ADC2: (adc2),
 }
