@@ -45,7 +45,7 @@ fn main() -> ! {
     let can_tx = gpioa.pa12.into_af9(&mut gpioa.moder, &mut gpioa.afrh);
 
     // Initialize the CAN peripheral
-    let can = Can::new(dp.CAN, &mut rcc.apb1);
+    let can = Can::new(dp.CAN, can_tx, can_rx, &mut rcc.apb1);
 
     let mut can = bxcan::Can::new(can);
 
