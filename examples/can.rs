@@ -13,7 +13,9 @@ use hal::prelude::*;
 use hal::stm32;
 use hal::watchdog::IndependentWatchDog;
 
-use hal::can::{Can, CanFilter, CanFrame, CanId, Filter, Frame, Receiver, Transmitter};
+use bxcan::filter::{Mask16, Mask32};
+use bxcan::{Frame, StandardId};
+use hal::can::Can;
 use nb::block;
 
 // Each "node" needs a different ID, we set up a filter too look for messages to this ID
@@ -29,12 +31,13 @@ fn main() -> ! {
     let mut gpiob = dp.GPIOB.split(&mut rcc.ahb);
     let mut gpioa = dp.GPIOA.split(&mut rcc.ahb);
 
-    let _clocks = rcc
+    let clocks = rcc
         .cfgr
         .use_hse(32.mhz())
-        .sysclk(32.mhz())
-        .pclk1(16.mhz())
-        .pclk2(16.mhz())
+        .hclk(64.mhz())
+        .sysclk(64.mhz())
+        .pclk1(32.mhz())
+        .pclk2(64.mhz())
         .freeze(&mut flash.acr);
 
     // Configure CAN RX and TX pins (AF9)
@@ -42,20 +45,32 @@ fn main() -> ! {
     let can_tx = gpioa.pa12.into_af9(&mut gpioa.moder, &mut gpioa.afrh);
 
     // Initialize the CAN peripheral
-    let can = Can::new(dp.CAN, can_rx, can_tx, &mut rcc.apb1);
+    let can = Can::new(dp.CAN, &mut rcc.apb1);
 
-    // Uncomment the following line to enable CAN interrupts
-    // can.listen(Event::Fifo0Fmp);
+    let mut can = bxcan::Can::new(can);
 
-    let (mut can_tx, mut rx0, _rx1) = can.split();
+    // Use loopback mode: No pins need to be assigned to peripheral.
+    // APB1 (PCLK1): 64MHz, Bit rate: 500kBit/s, Sample Point 87.5%
+    // Value was calculated with http://www.bittiming.can-wiki.info/
+    can.modify_config()
+        .set_bit_timing(0x001c_0003)
+        .set_loopback(false)
+        .set_silent(false);
+
+    let mut filters = can.modify_filters();
+
+    filters.enable_bank(0, Mask32::accept_all());
+
+    // Enable filters.
+    drop(filters);
+
+    // Sync to the bus and start normal operation.
+    block!(can.enable()).ok();
 
     let mut led0 = gpiob
         .pb15
         .into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
     led0.set_high().unwrap();
-
-    let filter = CanFilter::from_mask(0b100, ID as u32);
-    rx0.set_filter(filter);
 
     // Watchdog makes sure this gets restarted periodically if nothing happens
     let mut iwdg = IndependentWatchDog::new(dp.IWDG);
@@ -64,14 +79,14 @@ fn main() -> ! {
 
     // Send an initial message!
     asm::delay(100_000);
-    let data: [u8; 1] = [0];
+    let data: [u8; 1] = [1];
 
-    let frame = CanFrame::new_data(CanId::BaseId(ID), &data);
+    let frame = Frame::new_data(StandardId::new(ID).unwrap(), data);
 
-    block!(can_tx.transmit(&frame)).expect("Cannot send first CAN frame");
+    block!(can.transmit(&frame)).expect("Cannot send first CAN frame");
 
     loop {
-        let rcv_frame = block!(rx0.receive()).expect("Cannot receive CAN frame");
+        let rcv_frame = block!(can.receive()).expect("Cannot receive CAN frame");
 
         if let Some(d) = rcv_frame.data() {
             let counter = d[0].wrapping_add(1);
@@ -81,9 +96,9 @@ fn main() -> ! {
             }
 
             let data: [u8; 1] = [counter];
-            let frame = CanFrame::new_data(CanId::BaseId(ID), &data);
+            let frame = Frame::new_data(StandardId::new(ID).unwrap(), data);
 
-            block!(can_tx.transmit(&frame)).expect("Cannot send CAN frame");
+            block!(can.transmit(&frame)).expect("Cannot send CAN frame");
         }
 
         iwdg.feed();
