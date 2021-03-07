@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- Added support for more CAN bit rates and modes. ([#186](https://github.com/stm32-rs/stm32f3xx-hal/pull/186)
+- Refactor CAN to use the [`bxCan`](https://github.com/stm32-rs/bxcan) crate. ([#207])
 
 ## [v0.6.1] - 2020-12-10
 
