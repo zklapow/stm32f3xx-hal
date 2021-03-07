@@ -46,8 +46,6 @@ cfg_if! {
         impl RxPin for gpiod::PD0<AF7> {}
         impl sealed::Sealed for gpiod::PD1<AF7> {}
         impl TxPin for gpiod::PD1<AF7> {}
-
-
     }
 }
 
